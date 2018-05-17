@@ -7,12 +7,17 @@ import android.content.Intent;
 import android.os.Build;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
+import android.view.MotionEvent;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.view.View.OnClickListener;
 import android.widget.EditText;
+import android.widget.Spinner;
 import android.widget.Toast;
 
 import com.google.gson.JsonIOException;
@@ -23,12 +28,16 @@ import com.koushikdutta.ion.Ion;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.Arrays;
+
 public class Register extends AppCompatActivity {
     // UI references.
     private EditText mEmailView;
     private EditText mPasswordView;
     private EditText mCountryView;
     private EditText mCityView;
+    private RecyclerView.Adapter mAdapter;
+    boolean spinnerTouched = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,8 +47,8 @@ public class Register extends AppCompatActivity {
         // Set up the register form.
         mEmailView = (EditText) findViewById(R.id.emailRegistro);
         mPasswordView = (EditText) findViewById(R.id.passwordRegistro);
-        mCountryView = (EditText) findViewById(R.id.countryRegistro);
-        mCityView = (EditText) findViewById(R.id.cityRegistro);
+        //mCountryView = (EditText) findViewById(R.id.countryRegistro);
+        //mCityView = (EditText) findViewById(R.id.cityRegistro);
 
         findViewById(R.id.buttonSendRegister).setOnClickListener(new OnClickListener() {
             @Override
@@ -48,8 +57,94 @@ public class Register extends AppCompatActivity {
                 //Intent intent = new Intent(view.getContext(), MainActivity.class);
                 //startActivityForResult(intent, 0);
                 attemptRegister();
+                }
+        });
+
+        final String[] myDataset = {"Fredo", "sos", "Groso","Cheese", "Pepperoni", "Black Olives","Fredo", "sos", "Groso"};
+        Spinner spinner = (Spinner) findViewById(R.id.spinnerCountries);
+        // Create an ArrayAdapter using the string array and a default spinner layout
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
+                android.R.layout.simple_spinner_item, myDataset);
+        // Specify the layout to use when the list of choices appears
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        // Apply the adapter to the spinner
+        spinner.setAdapter(adapter);
+
+        spinner.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+
+                if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                    spinnerTouched = true; // User DID touched the spinner!
+                }
+
+                return false;
             }
         });
+        
+        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parentView, View selectedItemView, int position, long id) {
+
+                if (spinnerTouched) {
+                    // Do something
+                    Toast.makeText(getApplicationContext(),
+                            "country: " + myDataset[position],
+                            Toast.LENGTH_LONG).show();
+                }
+                else {
+                    // Do something else
+                }
+
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parentView) {
+            }
+        });
+
+        Spinner spinner2 = (Spinner) findViewById(R.id.spinnerCities);
+
+        spinner2.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+
+                if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                    spinnerTouched = true; // User DID touched the spinner!
+                }
+
+                return false;
+            }
+        });
+
+        spinner2.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parentView, View selectedItemView, int position, long id) {
+
+                if (spinnerTouched) {
+                    // Do something
+                    Toast.makeText(getApplicationContext(),
+                            "city: " + myDataset[position],
+                            Toast.LENGTH_LONG).show();
+                }
+                else {
+                    // Do something else
+                }
+
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parentView) {
+            }
+        });
+
+
+        ArrayAdapter<String> adapter2 = new ArrayAdapter<String>(this,
+                android.R.layout.simple_spinner_item, myDataset);
+        adapter2.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinner2.setAdapter(adapter2);
+
+
 
     }
     /**
@@ -151,3 +246,4 @@ public class Register extends AppCompatActivity {
         return email.contains("@");
     }
 }
+

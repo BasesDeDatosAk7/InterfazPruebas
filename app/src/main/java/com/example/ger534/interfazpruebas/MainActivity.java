@@ -1,15 +1,26 @@
 package com.example.ger534.interfazpruebas;
 
 import android.annotation.SuppressLint;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.IntentSender;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.design.widget.BottomNavigationView;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.view.GestureDetector;
+import android.view.MenuItem;
+import android.view.MotionEvent;
+import android.view.View;
+import android.widget.CompoundButton;
+import android.widget.Spinner;
+import android.widget.Switch;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.api.ResolvableApiException;
@@ -28,17 +39,15 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.koushikdutta.async.future.FutureCallback;
 import com.koushikdutta.ion.Ion;
+import com.koushikdutta.ion.builder.Builders;
 
 
 public class MainActivity extends AppCompatActivity {
 
     //Ion.
     private RecyclerView mRecyclerView;
-    private RecyclerView mRecyclerView2;
     private RecyclerView.Adapter mAdapter;
-    private RecyclerView.Adapter mAdapter2;
     private RecyclerView.LayoutManager mLayoutManager;
-    private RecyclerView.LayoutManager mLayoutManager2;
     private FusedLocationProviderClient mFusedLocationClient;
     private LocationCallback mLocationCallback;
     private LocationManager locationManager;
@@ -48,38 +57,162 @@ public class MainActivity extends AppCompatActivity {
     protected static final int REQUEST_CHECK_SETTINGS = 0x1;
     private LocationRequest mLocationRequest;
     private boolean mRequestingLocationUpdates = false;
+    private TextView mTextMessage;
+    private Switch mSwitch;
+
+
+    private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
+            = new BottomNavigationView.OnNavigationItemSelectedListener() {
+
+        @SuppressLint("ResourceType")
+        @Override
+        public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+            switch (item.getItemId()) {
+                case R.id.navigation_home:
+                    mSwitch.setVisibility(View.VISIBLE);
+                    mTextMessage.setText("Concursos");
+                    String[] myDataset = {"Costa Rica", "Nicaragua", "Panama"};
+                    String[] myDataset2 = {"San Jose", "Cartago", "Heredia"};
+                    mAdapter = new MyAdapter(myDataset);
+                    mRecyclerView.setAdapter(mAdapter);
+                    if(mSwitch.isChecked()){
+                        mAdapter = new MyAdapter(myDataset);
+                        mRecyclerView.setAdapter(mAdapter);
+                    }else{
+                        mAdapter = new MyAdapter(myDataset2);
+                        mRecyclerView.setAdapter(mAdapter);
+
+                    }
+
+                    return true;
+                case R.id.navigation_notifications:
+                    mSwitch.setVisibility(View.INVISIBLE);
+                    mTextMessage.setText("Mensajes");
+                    String[] myDataset3 = {"Segundo acertijo", "Primera pista de Primer certijo", "Primer acertijo"};
+                    mAdapter = new MyAdapter(myDataset3);
+                    mRecyclerView.setAdapter(mAdapter);
+                    return true;
+            }
+            return false;
+        }
+    };
 
     @SuppressLint("MissingPermission")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        mTextMessage = (TextView) findViewById(R.id.message);
 
-        String[] myDataset = {"Cheese", "Pepperoni", "Black Olives"};
-        String[] myDataset2 = {"Fredo", "sos", "Groso"};
+        mSwitch = (Switch) findViewById(R.id.switchFiltro);
+
+
+
+        BottomNavigationView navigation = (BottomNavigationView) findViewById(R.id.navigation);
+        navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener);
+
+        final String[] myDataset = {"Costa Rica", "Nicaragua", "Panama"};
+        final String[] myDataset2 = {"San Jose", "Cartago", "Heredia"};
 
         mRecyclerView = (RecyclerView) findViewById(R.id.consursos_list);
-        mRecyclerView2 = (RecyclerView) findViewById(R.id.mensajes_list);
 
         // use this setting to improve performance if you know that changes
         // in content do not change the layout size of the RecyclerView
         mRecyclerView.setHasFixedSize(true);
-        mRecyclerView2.setHasFixedSize(true);
 
         // use a linear layout manager
         mLayoutManager = new LinearLayoutManager(this);
         mRecyclerView.setLayoutManager(mLayoutManager);
-
-        mLayoutManager2 = new LinearLayoutManager(this);
-        mRecyclerView2.setLayoutManager(mLayoutManager2);
-
-
-        // specify an adapter (see also next example)
         mAdapter = new MyAdapter(myDataset);
         mRecyclerView.setAdapter(mAdapter);
 
-        mAdapter2 = new MyAdapter(myDataset2);
-        mRecyclerView2.setAdapter(mAdapter2);
+        // TODO: NO DEBEN SER FINAL!!
+        mSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                // do something, the isChecked will be
+                // true if the switch is in the On position
+                if(mSwitch.isChecked()){
+                    mAdapter = new MyAdapter(myDataset);
+                    mRecyclerView.setAdapter(mAdapter);
+                }else{
+                    mAdapter = new MyAdapter(myDataset2);
+                    mRecyclerView.setAdapter(mAdapter);
+
+                }
+            }
+        });
+
+
+        final GestureDetector mGestureDetector = new GestureDetector(MainActivity.this, new GestureDetector.SimpleOnGestureListener() {
+            @Override public boolean onSingleTapUp(MotionEvent e) {
+                return true;
+            }
+        });
+
+
+        mRecyclerView.addOnItemTouchListener(new RecyclerView.OnItemTouchListener() {
+            @Override
+            public void onRequestDisallowInterceptTouchEvent(boolean b) {
+
+            }
+
+            @Override
+            public boolean onInterceptTouchEvent(RecyclerView recyclerView, MotionEvent motionEvent) {
+                try {
+                    View child = recyclerView.findChildViewUnder(motionEvent.getX(), motionEvent.getY());
+
+                    if (child != null && mGestureDetector.onTouchEvent(motionEvent)) {
+
+                        int position = recyclerView.getChildAdapterPosition(child);
+
+                        Toast.makeText(MainActivity.this,"The Item Clicked is: "+ position ,Toast.LENGTH_SHORT).show();
+
+                        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+
+                        if(mTextMessage.getText().equals("Mensajes")){
+                            builder.setMessage("lol")
+                                    .setPositiveButton("lel", new DialogInterface.OnClickListener() {
+                                        public void onClick(DialogInterface dialog, int id) {
+                                            // FIRE ZE MISSILES!
+                                        }
+                                    })
+                                    .setNegativeButton("lol no", new DialogInterface.OnClickListener() {
+                                        public void onClick(DialogInterface dialog, int id) {
+                                            // User cancelled the dialog
+                                        }
+                                    });
+                        }else{
+                            builder.setMessage("Personas trás de X acertijo: 3" +'\n' + "Personas que abandonaron el concurso: 4" +'\n')
+                                    .setPositiveButton("Unirse al concurso", new DialogInterface.OnClickListener() {
+                                        public void onClick(DialogInterface dialog, int id) {
+                                            // FIRE ZE MISSILES!
+                                        }
+                                    })
+                                    .setNegativeButton("Cancelar", new DialogInterface.OnClickListener() {
+                                        public void onClick(DialogInterface dialog, int id) {
+                                            // User cancelled the dialog
+                                        }
+                                    });
+                        }
+                        // Create the AlertDialog object and return it
+                        builder.create();
+                        builder.show();
+
+                        return true;
+                    }
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
+
+                return false;
+            }
+
+            @Override
+            public void onTouchEvent(RecyclerView recyclerView, MotionEvent motionEvent) {
+
+            }
+        });
+
 
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
@@ -121,7 +254,6 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
                 });
-        //Toast.makeText(getApplicationContext(), "Longitude: " + String.valueOf(x[0]) + " latitude: " + String.valueOf(y[0]), Toast.LENGTH_LONG).show();
 
         final LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder();
         SettingsClient client = LocationServices.getSettingsClient(this);
@@ -167,8 +299,6 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
                 for (Location location : locationResult.getLocations()) {
-                    // Update UI with location data
-                    // ...
                     Toast.makeText(getApplicationContext(),
                             "longitude: " + String.valueOf(location.getLongitude()) + " latitude: " + String.valueOf(location.getLatitude()),
                             Toast.LENGTH_LONG).show();
