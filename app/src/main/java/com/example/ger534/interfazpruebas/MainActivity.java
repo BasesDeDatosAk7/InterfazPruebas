@@ -24,6 +24,7 @@ import com.google.android.gms.location.SettingsClient;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.koushikdutta.async.future.FutureCallback;
 import com.koushikdutta.ion.Ion;
@@ -33,8 +34,11 @@ public class MainActivity extends AppCompatActivity {
 
     //Ion.
     private RecyclerView mRecyclerView;
+    private RecyclerView mRecyclerView2;
     private RecyclerView.Adapter mAdapter;
+    private RecyclerView.Adapter mAdapter2;
     private RecyclerView.LayoutManager mLayoutManager;
+    private RecyclerView.LayoutManager mLayoutManager2;
     private FusedLocationProviderClient mFusedLocationClient;
     private LocationCallback mLocationCallback;
     private LocationManager locationManager;
@@ -52,20 +56,30 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         String[] myDataset = {"Cheese", "Pepperoni", "Black Olives"};
+        String[] myDataset2 = {"Fredo", "sos", "Groso"};
 
         mRecyclerView = (RecyclerView) findViewById(R.id.consursos_list);
+        mRecyclerView2 = (RecyclerView) findViewById(R.id.mensajes_list);
 
         // use this setting to improve performance if you know that changes
         // in content do not change the layout size of the RecyclerView
         mRecyclerView.setHasFixedSize(true);
+        mRecyclerView2.setHasFixedSize(true);
 
         // use a linear layout manager
         mLayoutManager = new LinearLayoutManager(this);
         mRecyclerView.setLayoutManager(mLayoutManager);
 
+        mLayoutManager2 = new LinearLayoutManager(this);
+        mRecyclerView2.setLayoutManager(mLayoutManager2);
+
+
         // specify an adapter (see also next example)
         mAdapter = new MyAdapter(myDataset);
         mRecyclerView.setAdapter(mAdapter);
+
+        mAdapter2 = new MyAdapter(myDataset2);
+        mRecyclerView2.setAdapter(mAdapter2);
 
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
@@ -88,18 +102,22 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         Ion.with(getApplicationContext())
-                .load("http://ip.jsontest.com/")
-                .asJsonObject()
-                .setCallback(new FutureCallback<JsonObject>() {
+                .load("http://172.19.50.141:3000/api/employees") //localhost:3000/db/ciudad?opc=1
+                .asJsonArray()
+                .setCallback(new FutureCallback<JsonArray>() {
                     @Override
-                    public void onCompleted(Exception e, JsonObject result) {
+                    public void onCompleted(Exception e, JsonArray result) {
                         // do stuff with the result or error
                         try {
                             Toast.makeText(getApplicationContext(),
-                                    "salida de ion: " + result.toString(),
+                                    "salida de ion (server): " + result.toString(),
                                     Toast.LENGTH_LONG).show();
+                            //result.get(0).toString();
                         }catch (Exception er){
-
+                            System.out.println(result);
+                            Toast.makeText(getApplicationContext(),
+                                    "mae si vio esto, mamó: " +result,
+                                    Toast.LENGTH_LONG).show();
                         }
                     }
                 });
@@ -115,9 +133,6 @@ public class MainActivity extends AppCompatActivity {
                 // All location settings are satisfied. The client can initialize
                 // location requests here.
                 // ...
-                Toast.makeText(getApplicationContext(),
-                        "yupi",
-                        Toast.LENGTH_LONG).show();
                 builder.addLocationRequest(createLocationRequest());
                 mRequestingLocationUpdates = true;
             }
@@ -147,14 +162,13 @@ public class MainActivity extends AppCompatActivity {
             public void onLocationResult(LocationResult locationResult) {
                 if (locationResult == null) {
                     Toast.makeText(getApplicationContext(),
-                            "longitude: wrong",
+                            "wrong",
                             Toast.LENGTH_LONG).show();
                     return;
                 }
                 for (Location location : locationResult.getLocations()) {
                     // Update UI with location data
                     // ...
-
                     Toast.makeText(getApplicationContext(),
                             "longitude: " + String.valueOf(location.getLongitude()) + " latitude: " + String.valueOf(location.getLatitude()),
                             Toast.LENGTH_LONG).show();
@@ -187,7 +201,24 @@ public class MainActivity extends AppCompatActivity {
                 mLocationCallback,
                 null);
     }
+    //https://www.movable-type.co.uk/scripts/latlong.html
+    private void calculateRange(double lat1,double lat2,double lon1,double lon2){
+        double R = 6371e3; // metres
+        double phi1 = lat1 * 180/Math.PI;
+        double phi2 = lat2 * 180/Math.PI;
+        double deltaPhi = (lat2-lat1) * 180/Math.PI;
+        double deltaLambda = (lon2-lon1) * 180/Math.PI;
+
+        double a = Math.sin(deltaPhi/2) * Math.sin(deltaPhi/2) +
+                Math.cos(phi1) * Math.cos(phi2) *
+                        Math.sin(deltaPhi/2) * Math.sin(deltaLambda/2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+        double d = R * c;
+    }
 
 
 
 }
+
+

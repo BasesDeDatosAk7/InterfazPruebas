@@ -15,7 +15,10 @@ import android.view.View.OnClickListener;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import com.google.gson.JsonIOException;
 import com.google.gson.JsonObject;
+import com.koushikdutta.async.future.FutureCallback;
+import com.koushikdutta.ion.Ion;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -101,17 +104,41 @@ public class Register extends AppCompatActivity {
 
     void UserRegisterTask(String email, String password) {
         String message;
-        JSONObject json = new JSONObject();
+        JsonObject json = new JsonObject();
         try {
-            json.put("email", email);
-            json.put("password", password);
-        } catch (JSONException e) {
+            json.addProperty("email", email);
+            json.addProperty("password", password);
+        } catch (JsonIOException e) {
             e.printStackTrace();
         }
+
         message = json.toString();
         Toast.makeText(getApplicationContext(),
-                "json: " + message,
+                "json: " +message,
                 Toast.LENGTH_LONG).show();
+
+        Ion.with(getApplicationContext())
+                //.load("http://172.19.50.141:3000/api/employees")
+                .load("http://172.19.50.141:3000/api/usuario")
+                .setJsonObjectBody(json)
+                .asJsonObject()
+                .setCallback(new FutureCallback<JsonObject>() {
+                    @Override
+                    public void onCompleted(Exception e, JsonObject result) {
+                        // do stuff with the result or error
+                        try {
+                            Toast.makeText(getApplicationContext(),
+                                    "salida de ion (server): " + result.toString(),
+                                    Toast.LENGTH_LONG).show();
+                        }catch (Exception er){
+                            System.out.println(result);
+                            Toast.makeText(getApplicationContext(),
+                                    "mae si vio esto, mamó: " +result,
+                                    Toast.LENGTH_LONG).show();
+                        }
+
+                    }
+                });
     }
 
     private boolean isPasswordValid(String password) {
