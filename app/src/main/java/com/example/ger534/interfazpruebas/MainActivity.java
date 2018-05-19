@@ -67,6 +67,7 @@ public class MainActivity extends AppCompatActivity {
     private String nameUser;
     private String idUser;
     private String concursoUser;
+    private String[] concursoUserList;
     private TextView concursoView;
 
 
@@ -218,22 +219,135 @@ public class MainActivity extends AppCompatActivity {
 
                         Toast.makeText(MainActivity.this,"The Item Clicked is: "+ position ,Toast.LENGTH_SHORT).show();
 
-                        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                        final AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
 
                         if(mTextMessage.getText().equals("Mensajes")){
-                            builder.setMessage("lol")
-                                    .setPositiveButton("lel", new DialogInterface.OnClickListener() {
+                            builder.setMessage("Pista Oculta")
+                                    .setPositiveButton("Mostrar pista", new DialogInterface.OnClickListener() {
                                         public void onClick(DialogInterface dialog, int id) {
                                             // FIRE ZE MISSILES!
+                                            //builder.setMessage("Pista")
+
+                                            JsonObject jsonC3 = new JsonObject();
+                                            try {
+                                                jsonC3.addProperty("usuario",idUser);
+                                            } catch (JsonIOException e) {
+                                                e.printStackTrace();
+                                            }
+
+                                            Ion.with(getApplicationContext())
+                                                    .load("http://192.168.100.17:3000/db/getConcursosDeUsers")
+                                                    .setJsonObjectBody(jsonC3)
+                                                    .asJsonArray()
+                                                    .setCallback(new FutureCallback<JsonArray>() {
+                                                        @Override
+                                                        public void onCompleted(Exception e, JsonArray result) {
+                                                            // do stuff with the result or error
+                                                            try{
+                                                                Toast.makeText(getApplicationContext(),
+                                                                        "salida de ion (server): " + result.toString(),
+                                                                        Toast.LENGTH_LONG).show();
+                                                                for(int i = 0; i < result.getAsJsonArray().size(); i++){
+                                                                    String col = result.getAsJsonArray().get(i).getAsJsonObject().get("COLUMN_VALUE").toString();
+                                                                    col = col.substring(1);
+                                                                    col = col.substring(0, col.length() - 1);
+                                                                    concursoUserList[i] = col;
+                                                                }
+
+                                                                JsonObject json = new JsonObject();
+                                                                try {
+                                                                    json.addProperty("usuario", idUser);
+                                                                    concursoView = (TextView) child.findViewById(R.id.my_text_view);
+                                                                    concursoUser = concursoView.getText().toString();
+                                                                    concursoUser = concursoUser.substring(1);
+                                                                    concursoUser = concursoUser.substring(0, concursoUser.length() - 1);
+
+                                                                    System.out.println("lel "+concursoUser);
+                                                                    json.addProperty("concurso", concursoUserList[position]);
+                                                                } catch (JsonIOException ee) {
+                                                                    ee.printStackTrace();
+                                                                }
+
+                                                                Toast.makeText(getApplicationContext(),
+                                                                        json.toString(),
+                                                                        Toast.LENGTH_LONG).show();
+
+                                                                final AlertDialog.Builder builderPista = new AlertDialog.Builder(MainActivity.this);
+                                                                Ion.with(getApplicationContext())
+                                                                        .load("http://192.168.100.17:3000/db/getPistas")
+                                                                        .setJsonObjectBody(json)
+                                                                        .asJsonArray()
+                                                                        .setCallback(new FutureCallback<JsonArray>() {
+                                                                            @Override
+                                                                            public void onCompleted(Exception e, JsonArray result) {
+                                                                                // do stuff with the result or error
+                                                                                try {
+                                                                                    if(result.getAsJsonArray().get(0).getAsJsonObject().get("COLUMN_VALUE").toString().equals("\"false\"")){
+                                                                                        builderPista.setMessage("No hay pista");
+                                                                                    }else{
+                                                                                        String pista = "";
+                                                                                        for(int i = 0; i < result.getAsJsonArray().size(); i++){
+                                                                                            pista = pista + result.getAsJsonArray().get(0).getAsJsonObject().get("COLUMN_VALUE").toString();
+                                                                                        }
+                                                                                        builderPista.setMessage(pista);
+                                                                                    }
+                                                                                }catch (Exception er){
+                                                                                    Toast.makeText(getApplicationContext(),
+                                                                                            "No hay conexión",
+                                                                                            Toast.LENGTH_LONG).show();
+                                                                                }
+                                                                            }
+
+                                                                        });
+                                                                builderPista.show();
+
+                                                            }catch(Exception er){
+                                                            }
+                                                        }
+                                                    });
+
+
+
+
                                         }
                                     })
-                                    .setNegativeButton("lol no", new DialogInterface.OnClickListener() {
+                                    .setNegativeButton("Cancelar", new DialogInterface.OnClickListener() {
                                         public void onClick(DialogInterface dialog, int id) {
                                             // User cancelled the dialog
                                         }
                                     });
-                        }else{
-                            builder.setMessage("Personas trás de X acertijo: 3" +'\n' + "Personas que abandonaron el concurso: 4" +'\n')
+                        }if(mTextMessage.getText().equals("Estadísticas de los concursos suscritos")){
+
+                            Ion.with(getApplicationContext())
+                                    .load("http://192.168.100.17:3000/db/getAbandonos")
+                                    .asJsonObject()
+                                    .setCallback(new FutureCallback<JsonObject>() {
+                                        @Override
+                                        public void onCompleted(Exception e, JsonObject result) {
+                                            // do stuff with the result or error
+                                            try {
+                                                Toast.makeText(getApplicationContext(),
+                                                        "salida de ion (server): " + result.toString(),
+                                                        Toast.LENGTH_LONG).show();
+
+                                                builder.setMessage("Personas trás de X acertijo: 3" +'\n' + "Personas que abandonaron el concurso: "+result.get("retorno").toString() +'\n')
+                                                        .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+                                                            public void onClick(DialogInterface dialog, int id) {
+
+                                                            }
+                                                        });
+                                                builder.create();
+                                                builder.show();
+
+                                            }catch (Exception er){
+                                            }
+                                        }
+                                    });
+
+
+                        }
+                        else{
+                            builder.setMessage("Desea unirse")
                                     .setPositiveButton("Unirse al concurso", new DialogInterface.OnClickListener() {
                                         public void onClick(DialogInterface dialog, int id) {
 
@@ -398,6 +512,8 @@ public class MainActivity extends AppCompatActivity {
                 for (Location location : locationResult.getLocations()) {
 
 
+
+
                     if(30.00>calculateRange(location.getLatitude(), location.getLatitude(), location.getLongitude(), location.getLongitude())){
 
                         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
@@ -453,11 +569,6 @@ public class MainActivity extends AppCompatActivity {
                             e.printStackTrace();
                         }
 
-                        System.out.println(json.toString());
-                        Toast.makeText(getApplicationContext(),
-                                "salida: " + json.toString(),
-                                Toast.LENGTH_LONG).show();
-
                         Ion.with(getApplicationContext())
                                 .load("http://192.168.100.17:3000/db/getConcursosPorPais")
                                 .setJsonObjectBody(json)
@@ -500,68 +611,96 @@ public class MainActivity extends AppCompatActivity {
                         mSwitch.setVisibility(View.INVISIBLE);
                         mRecyclerView.setVisibility(View.VISIBLE);
                         mTextMessage.setText("Mensajes");
-                        final List myDataset3 = new ArrayList();
-                        Toast.makeText(getApplicationContext(),
-                                "vio: " +concursoUser+" vio: " + idUser,
-                                Toast.LENGTH_LONG).show();
-                        JsonObject json3 = new JsonObject();
+
+                        final List myDatasetC3 = new ArrayList();
+
+                        JsonObject jsonC3 = new JsonObject();
                         try {
-                            json3.addProperty("usuario",idUser);
-                            json3.addProperty("concurso",concursoUser);
+                            jsonC3.addProperty("usuario",idUser);
                         } catch (JsonIOException e) {
                             e.printStackTrace();
                         }
-                        Toast.makeText(getApplicationContext(),
-                                json3.toString(),
-                                Toast.LENGTH_LONG).show();
 
                         Ion.with(getApplicationContext())
-                                .load("http://192.168.100.17:3000/db/getAcertijo")
-                                .setJsonObjectBody(json3)
+                                .load("http://192.168.100.17:3000/db/getConcursosDeUsers")
+                                .setJsonObjectBody(jsonC3)
                                 .asJsonArray()
                                 .setCallback(new FutureCallback<JsonArray>() {
                                     @Override
                                     public void onCompleted(Exception e, JsonArray result) {
                                         // do stuff with the result or error
-                                        try {
-
+                                        try{
                                             Toast.makeText(getApplicationContext(),
                                                     "salida de ion (server): " + result.toString(),
                                                     Toast.LENGTH_LONG).show();
-                                            for(int i = 0; i < result.getAsJsonArray().size(); i=i+2){
-                                                myDataset3.add("Acertijo:"+ "\n" +
-                                                                result.getAsJsonArray().get(i).getAsJsonObject().get("COLUMN_VALUE").toString() + "\n" +
-                                                                 result.getAsJsonArray().get(i+1).getAsJsonObject().get("COLUMN_VALUE").toString());
+                                            for(int i = 0; i < result.getAsJsonArray().size(); i++){
+                                                String col = result.getAsJsonArray().get(i).getAsJsonObject().get("COLUMN_VALUE").toString();
+                                                col = col.substring(1);
+                                                col = col.substring(0, col.length() - 1);
+                                                //concursoUserList[i] = col;
+                                                myDatasetC3.add(col);
+                                                System.out.println("MAEEEEEEEEEEEEEEEEE " +myDatasetC3.get(i));
                                             }
 
-                                            mAdapter = new MyAdapter(myDataset3);
-                                            mRecyclerView.setAdapter(mAdapter);
+                                            final List myDataset3 = new ArrayList();
+                                            System.out.println("MAEEEEEEEEEEEEEEEEE " +myDatasetC3.size());
+
+                                            for(int j = 0; j< myDatasetC3.size(); j++){
+                                                System.out.println("MAEEEEEEEEEEEEEEEEE");
+                                                final JsonObject json3 = new JsonObject();
+                                                try {
+                                                    json3.addProperty("usuario",idUser);
+                                                    json3.addProperty("concurso",myDatasetC3.get(j).toString());
+                                                } catch (JsonIOException ee) {
+                                                    ee.printStackTrace();
+                                                }
+
+                                                Ion.with(getApplicationContext())
+                                                        .load("http://192.168.100.17:3000/db/getAcertijo")
+                                                        .setJsonObjectBody(json3)
+                                                        .asJsonArray()
+                                                        .setCallback(new FutureCallback<JsonArray>() {
+                                                            @Override
+                                                            public void onCompleted(Exception e, JsonArray result) {
+                                                                // do stuff with the result or error
+                                                                System.out.println(result);
+                                                                try {
+
+                                                                    Toast.makeText(getApplicationContext(),
+                                                                            "salida de ion (server): " + result.toString(),
+                                                                            Toast.LENGTH_LONG).show();
+                                                                    for(int i = 0; i < result.getAsJsonArray().size(); i=i+2){
+                                                                        myDataset3.add("Acertijo de "+ json3.get("concurso") +":"+ "\n" +
+                                                                                result.getAsJsonArray().get(i).getAsJsonObject().get("COLUMN_VALUE").toString() + "\n" +
+                                                                                result.getAsJsonArray().get(i+1).getAsJsonObject().get("COLUMN_VALUE").toString());
+                                                                    }
+                                                                    System.out.println(myDataset3.get(0));
+
+                                                                    mAdapter = new MyAdapter(myDataset3);
+                                                                    mRecyclerView.setAdapter(mAdapter);
+                                                                }catch (Exception er){
+                                                                }
+                                                            }
+                                                        });
+                                            }
                                         }catch (Exception er){
                                         }
                                     }
                                 });
-                        mAdapter = new MyAdapter(myDataset3);
-                        mRecyclerView.setAdapter(mAdapter);
+
+
                         return true;
 
                     case R.id.navigation_dashboard:
                         mSwitch.setVisibility(View.INVISIBLE);
                         //mRecyclerView.setVisibility(View.INVISIBLE);
 
-                        if(true){
-                            mTextMessage.setText("Estadísticas del concurso actual: " + '\n' +
-                                    "Personas trás de X acertijo: 3" +'\n' +
-                                    "Personas que abandonaron el concurso: 4" +'\n');
+                        mTextMessage.setText("Estadísticas de los concursos suscritos");
 
-                        }
-                        else{
-                            mTextMessage.setText("Estadísticas: " + '\n' +
-                                    "No se ha suscrito a ningún concurso");
-                        }
 
                         JsonObject json4 = new JsonObject();
                         try {
-                            json4.addProperty("concurso",concursoUser);
+                            json4.addProperty("usuario",idUser);
                         } catch (JsonIOException e) {
                             e.printStackTrace();
                         }
@@ -569,44 +708,34 @@ public class MainActivity extends AppCompatActivity {
                                 json4.toString(),
                                 Toast.LENGTH_LONG).show();
 
+                        final List myDatasetC = new ArrayList();
+
                         Ion.with(getApplicationContext())
-                                .load("http://192.168.100.17:3000/db/getRanking")
+                                .load("http://192.168.100.17:3000/db/getConcursosDeUsers")
                                 .setJsonObjectBody(json4)
                                 .asJsonArray()
                                 .setCallback(new FutureCallback<JsonArray>() {
                                     @Override
                                     public void onCompleted(Exception e, JsonArray result) {
                                         // do stuff with the result or error
-                                        try {
+                                        try{
+                                        Toast.makeText(getApplicationContext(),
+                                                "salida de ion (server): " + result.toString(),
+                                                Toast.LENGTH_LONG).show();
+                                        for(int i = 0; i < result.getAsJsonArray().size(); i++){
+                                            myDatasetC.add(result.getAsJsonArray().get(i).getAsJsonObject().get("COLUMN_VALUE").toString());
+                                        }
+                                        mSwitch.setChecked(true);
+                                        mAdapter = new MyAdapter(myDatasetC);
+                                        mRecyclerView.setAdapter(mAdapter);
+                                    }catch (Exception er){
 
-                                            Toast.makeText(getApplicationContext(),
-                                                    "salida de ion (server): " + result.toString(),
-                                                    Toast.LENGTH_LONG).show();
-                                            for(int i = 0; i < result.getAsJsonArray().size(); i++){
-                                            }
-
-                                        }catch (Exception er){
                                         }
                                     }
                                 });
 
-                        Ion.with(getApplicationContext())
-                                .load("http://192.168.100.17:3000/db/getAbandonos")
-                                .asJsonObject()
-                                .setCallback(new FutureCallback<JsonObject>() {
-                                    @Override
-                                    public void onCompleted(Exception e, JsonObject result) {
-                                        // do stuff with the result or error
-                                        try {
-
-                                            Toast.makeText(getApplicationContext(),
-                                                    "salida de ion (server): " + result.toString(),
-                                                    Toast.LENGTH_LONG).show();
-                                            }catch (Exception er){
-                                        }
-                                    }
-                                });
                         return true;
+
                 }
                 return false;
             }
