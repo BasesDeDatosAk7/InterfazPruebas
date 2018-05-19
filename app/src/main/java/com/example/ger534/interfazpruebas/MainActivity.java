@@ -3,6 +3,7 @@ package com.example.ger534.interfazpruebas;
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.IntentSender;
 import android.location.Location;
 import android.location.LocationListener;
@@ -36,10 +37,14 @@ import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonIOException;
 import com.google.gson.JsonObject;
 import com.koushikdutta.async.future.FutureCallback;
 import com.koushikdutta.ion.Ion;
 import com.koushikdutta.ion.builder.Builders;
+
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -59,43 +64,11 @@ public class MainActivity extends AppCompatActivity {
     private boolean mRequestingLocationUpdates = false;
     private TextView mTextMessage;
     private Switch mSwitch;
+    private String nameUser;
+    private String idUser;
+    private String concursoUser;
+    private TextView concursoView;
 
-
-    private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
-            = new BottomNavigationView.OnNavigationItemSelectedListener() {
-
-        @SuppressLint("ResourceType")
-        @Override
-        public boolean onNavigationItemSelected(@NonNull MenuItem item) {
-            switch (item.getItemId()) {
-                case R.id.navigation_home:
-                    mSwitch.setVisibility(View.VISIBLE);
-                    mTextMessage.setText("Concursos");
-                    String[] myDataset = {"Costa Rica", "Nicaragua", "Panama"};
-                    String[] myDataset2 = {"San Jose", "Cartago", "Heredia"};
-                    mAdapter = new MyAdapter(myDataset);
-                    mRecyclerView.setAdapter(mAdapter);
-                    if(mSwitch.isChecked()){
-                        mAdapter = new MyAdapter(myDataset);
-                        mRecyclerView.setAdapter(mAdapter);
-                    }else{
-                        mAdapter = new MyAdapter(myDataset2);
-                        mRecyclerView.setAdapter(mAdapter);
-
-                    }
-
-                    return true;
-                case R.id.navigation_notifications:
-                    mSwitch.setVisibility(View.INVISIBLE);
-                    mTextMessage.setText("Mensajes");
-                    String[] myDataset3 = {"Segundo acertijo", "Primera pista de Primer certijo", "Primer acertijo"};
-                    mAdapter = new MyAdapter(myDataset3);
-                    mRecyclerView.setAdapter(mAdapter);
-                    return true;
-            }
-            return false;
-        }
-    };
 
     @SuppressLint("MissingPermission")
     @Override
@@ -109,10 +82,87 @@ public class MainActivity extends AppCompatActivity {
 
 
         BottomNavigationView navigation = (BottomNavigationView) findViewById(R.id.navigation);
-        navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener);
 
-        final String[] myDataset = {"Costa Rica", "Nicaragua", "Panama"};
-        final String[] myDataset2 = {"San Jose", "Cartago", "Heredia"};
+        nameUser = getIntent().getStringExtra("nameUser");
+        idUser = getIntent().getStringExtra("idUser");
+        idUser = idUser.substring(1);
+        idUser = idUser.substring(0, idUser.length() - 1);
+        final List myDataset = new ArrayList();
+
+        JsonObject json = new JsonObject();
+        try {
+            json.addProperty("usuario",idUser);
+        } catch (JsonIOException e) {
+            e.printStackTrace();
+        }
+        Toast.makeText(getApplicationContext(),
+                json.toString(),
+                Toast.LENGTH_LONG).show();
+
+        Ion.with(getApplicationContext())
+                .load("http://192.168.100.17:3000/db/getConcursosPorPais")
+                .setJsonObjectBody(json)
+                .asJsonArray()
+                .setCallback(new FutureCallback<JsonArray>() {
+                    @Override
+                    public void onCompleted(Exception e, JsonArray result) {
+                        // do stuff with the result or error
+                        try {
+
+                            Toast.makeText(getApplicationContext(),
+                                    "salida de ion (server): " + result.toString(),
+                                    Toast.LENGTH_LONG).show();
+                            //result.get(0).toString();
+                            JsonArray json = result.getAsJsonArray();
+                            for(int i = 0; i < result.getAsJsonArray().size(); i++){
+                                myDataset.add(result.getAsJsonArray().get(i).getAsJsonObject().get("COLUMN_VALUE").toString());
+                            }
+                        }catch (Exception er){
+                            Toast.makeText(getApplicationContext(),
+                                    "1 mae si vio esto, mamó: " +result,
+                                    Toast.LENGTH_LONG).show();
+                        }
+                    }
+                });
+
+
+        final List myDataset2 = new ArrayList();
+
+        JsonObject json2 = new JsonObject();
+        try {
+            json2.addProperty("usuario",idUser);
+        } catch (JsonIOException e) {
+            e.printStackTrace();
+        }
+        Toast.makeText(getApplicationContext(),
+                json2.toString(),
+                Toast.LENGTH_LONG).show();
+
+        Ion.with(getApplicationContext())
+                .load("http://192.168.100.17:3000/db/getConcursosPorCiudad")
+                .setJsonObjectBody(json2)
+                .asJsonArray()
+                .setCallback(new FutureCallback<JsonArray>() {
+                    @Override
+                    public void onCompleted(Exception e, JsonArray result) {
+                        // do stuff with the result or error
+                        try {
+
+                            Toast.makeText(getApplicationContext(),
+                                    "salida de ion (server): " + result.toString(),
+                                    Toast.LENGTH_LONG).show();
+                            //result.get(0).toString();
+                            JsonArray json = result.getAsJsonArray();
+                            for(int i = 0; i < result.getAsJsonArray().size(); i++){
+                                myDataset2.add(result.getAsJsonArray().get(i).getAsJsonObject().get("COLUMN_VALUE").toString());
+                            }
+                        }catch (Exception er){
+                            Toast.makeText(getApplicationContext(),
+                                    "mae si vio esto, mamó: " +result,
+                                    Toast.LENGTH_LONG).show();
+                        }
+                    }
+                });
 
         mRecyclerView = (RecyclerView) findViewById(R.id.consursos_list);
 
@@ -126,15 +176,16 @@ public class MainActivity extends AppCompatActivity {
         mAdapter = new MyAdapter(myDataset);
         mRecyclerView.setAdapter(mAdapter);
 
-        // TODO: NO DEBEN SER FINAL!!
         mSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 // do something, the isChecked will be
                 // true if the switch is in the On position
                 if(mSwitch.isChecked()){
+                    mSwitch.setText("Country");
                     mAdapter = new MyAdapter(myDataset);
                     mRecyclerView.setAdapter(mAdapter);
                 }else{
+                    mSwitch.setText("City");
                     mAdapter = new MyAdapter(myDataset2);
                     mRecyclerView.setAdapter(mAdapter);
 
@@ -159,11 +210,11 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public boolean onInterceptTouchEvent(RecyclerView recyclerView, MotionEvent motionEvent) {
                 try {
-                    View child = recyclerView.findChildViewUnder(motionEvent.getX(), motionEvent.getY());
+                    final View child = recyclerView.findChildViewUnder(motionEvent.getX(), motionEvent.getY());
 
                     if (child != null && mGestureDetector.onTouchEvent(motionEvent)) {
 
-                        int position = recyclerView.getChildAdapterPosition(child);
+                        final int position = recyclerView.getChildAdapterPosition(child);
 
                         Toast.makeText(MainActivity.this,"The Item Clicked is: "+ position ,Toast.LENGTH_SHORT).show();
 
@@ -185,7 +236,78 @@ public class MainActivity extends AppCompatActivity {
                             builder.setMessage("Personas trás de X acertijo: 3" +'\n' + "Personas que abandonaron el concurso: 4" +'\n')
                                     .setPositiveButton("Unirse al concurso", new DialogInterface.OnClickListener() {
                                         public void onClick(DialogInterface dialog, int id) {
-                                            // FIRE ZE MISSILES!
+
+                                            JsonObject json = new JsonObject();
+                                            try {
+                                                json.addProperty("usuario", idUser);
+                                                concursoView = (TextView) child.findViewById(R.id.my_text_view);
+                                                concursoUser = concursoView.getText().toString();
+                                                concursoUser = concursoUser.substring(1);
+                                                concursoUser = concursoUser.substring(0, concursoUser.length() - 1);
+                                                System.out.println("lel");
+                                                json.addProperty("concurso", concursoUser);
+                                            } catch (JsonIOException e) {
+                                                e.printStackTrace();
+                                            }
+
+                                            Toast.makeText(getApplicationContext(),
+                                                    json.toString(),
+                                                    Toast.LENGTH_LONG).show();
+
+                                            Ion.with(getApplicationContext())
+                                                    .load("http://192.168.100.17:3000/db/registerParticipante")
+                                                    .setJsonObjectBody(json)
+                                                    .asJsonObject()
+                                                    .setCallback(new FutureCallback<JsonObject>() {
+                                                        @Override
+                                                        public void onCompleted(Exception e, JsonObject result) {
+                                                            // do stuff with the result or error
+                                                            try {
+                                                                if(result.get("retorno").toString().equals("\"true\"")){
+                                                                    Toast.makeText(getApplicationContext(),
+                                                                            "Se ha unido",
+                                                                            Toast.LENGTH_LONG).show();
+                                                                }else{
+                                                                    Toast.makeText(getApplicationContext(),
+                                                                            "Error",
+                                                                            Toast.LENGTH_LONG).show();
+                                                                }
+
+                                                            }catch (Exception er){
+                                                                Toast.makeText(getApplicationContext(),
+                                                                        "No hay conexión",
+                                                                        Toast.LENGTH_LONG).show();
+                                                            }
+                                                        }
+
+                                                    });
+
+                                            Ion.with(getApplicationContext())
+                                                    .load("http://192.168.100.17:3000/db/registerParticipante")
+                                                    .asJsonObject()
+                                                    .setCallback(new FutureCallback<JsonObject>() {
+                                                        @Override
+                                                        public void onCompleted(Exception e, JsonObject result) {
+                                                            // do stuff with the result or error
+                                                            try {
+                                                                if(result.get("retorno").toString().equals("\"true\"")){
+                                                                    Toast.makeText(getApplicationContext(),
+                                                                            "Se ha unido al concurso",
+                                                                            Toast.LENGTH_LONG).show();
+                                                                }else{
+                                                                    Toast.makeText(getApplicationContext(),
+                                                                            "Ya se ha unido a este concurso",
+                                                                            Toast.LENGTH_LONG).show();
+                                                                }
+
+                                                            }catch (Exception er){
+                                                                Toast.makeText(getApplicationContext(),
+                                                                        "No hay conexión",
+                                                                        Toast.LENGTH_LONG).show();
+                                                            }
+                                                        }
+
+                                                    });
                                         }
                                     })
                                     .setNegativeButton("Cancelar", new DialogInterface.OnClickListener() {
@@ -216,17 +338,12 @@ public class MainActivity extends AppCompatActivity {
 
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-
-        final double[] y = new double[1];
-        final double[] x = new double[1];
         mFusedLocationClient.getLastLocation().addOnSuccessListener(this, new OnSuccessListener<Location>() {
             @Override
             public void onSuccess(Location location) {
                 // Got last known location. In some rare situations this can be null.
                 if (location != null) {
                     mCurrentLocation = location;
-                    x[0] = location.getLongitude();
-                    y[0] = location.getLatitude();
                     // Logic to handle location object
                     Toast.makeText(getApplicationContext(),
                             "Longitude: " + String.valueOf(location.getLongitude()) + " latitude: " + String.valueOf(location.getLatitude()),
@@ -234,26 +351,6 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
-        Ion.with(getApplicationContext())
-                .load("http://172.19.50.141:3000/api/employees") //localhost:3000/db/ciudad?opc=1
-                .asJsonArray()
-                .setCallback(new FutureCallback<JsonArray>() {
-                    @Override
-                    public void onCompleted(Exception e, JsonArray result) {
-                        // do stuff with the result or error
-                        try {
-                            Toast.makeText(getApplicationContext(),
-                                    "salida de ion (server): " + result.toString(),
-                                    Toast.LENGTH_LONG).show();
-                            //result.get(0).toString();
-                        }catch (Exception er){
-                            System.out.println(result);
-                            Toast.makeText(getApplicationContext(),
-                                    "mae si vio esto, mamó: " +result,
-                                    Toast.LENGTH_LONG).show();
-                        }
-                    }
-                });
 
         final LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder();
         SettingsClient client = LocationServices.getSettingsClient(this);
@@ -299,12 +396,226 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
                 for (Location location : locationResult.getLocations()) {
+
+
+                    if(30.00>calculateRange(location.getLatitude(), location.getLatitude(), location.getLongitude(), location.getLongitude())){
+
+                        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+
+                        Toast.makeText(getApplicationContext(),
+                                "felicidades " + calculateRange(location.getLatitude(), location.getLatitude(), location.getLongitude(), location.getLongitude()),
+                                Toast.LENGTH_LONG).show();
+
+                        builder.setMessage("FELICIDADES")
+                                .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+                                    public void onClick(DialogInterface dialog, int id) {
+                                        // FIRE ZE MISSILES!
+                                    }
+                                });
+                        builder.create();
+                        //builder.show();
+
+                    }else{
+                        Toast.makeText(getApplicationContext(),
+                                "todavia no llega pa",
+                                Toast.LENGTH_LONG).show();
+                    }
+
                     Toast.makeText(getApplicationContext(),
                             "longitude: " + String.valueOf(location.getLongitude()) + " latitude: " + String.valueOf(location.getLatitude()),
                             Toast.LENGTH_LONG).show();
                 }
             };
         };
+
+
+        BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener  = new BottomNavigationView.OnNavigationItemSelectedListener() {
+
+            @SuppressLint("ResourceType")
+            @Override
+            public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+                switch (item.getItemId()) {
+                    case R.id.navigation_home:
+                        mSwitch.setVisibility(View.VISIBLE);
+                        //mRecyclerView.setVisibility(View.VISIBLE);
+                        mTextMessage.setText("Concursos");
+
+                        idUser = getIntent().getStringExtra("idUser");
+                        idUser = idUser.substring(1);
+                        idUser = idUser.substring(0, idUser.length() - 1);
+
+                        final List myDatasetA = new ArrayList();
+
+                        JsonObject json = new JsonObject();
+                        try {
+                            json.addProperty("usuario",idUser);
+                        } catch (JsonIOException e) {
+                            e.printStackTrace();
+                        }
+
+                        System.out.println(json.toString());
+                        Toast.makeText(getApplicationContext(),
+                                "salida: " + json.toString(),
+                                Toast.LENGTH_LONG).show();
+
+                        Ion.with(getApplicationContext())
+                                .load("http://192.168.100.17:3000/db/getConcursosPorPais")
+                                .setJsonObjectBody(json)
+                                .asJsonArray()
+                                .setCallback(new FutureCallback<JsonArray>() {
+                                    @Override
+                                    public void onCompleted(Exception e, JsonArray result) {
+                                        // do stuff with the result or error
+                                        System.out.println("entra en el request");
+                                        try {
+                                            System.out.println("entra en el try");
+                                            Toast.makeText(getApplicationContext(),
+                                                    "salida de ion (server): " + result.toString(),
+                                                    Toast.LENGTH_LONG).show();
+                                            //result.get(0).toString();
+                                            System.out.println("TAmano" +String.valueOf(result.getAsJsonArray().size()) );
+                                            JsonArray json = result.getAsJsonArray();
+                                            for(int i = 0; i < result.getAsJsonArray().size(); i++){
+                                                myDatasetA.add(result.getAsJsonArray().get(i).getAsJsonObject().get("COLUMN_VALUE").toString());
+                                                System.out.println("MAE"+ " " + result.getAsJsonArray().get(i).getAsJsonObject().get("COLUMN_VALUE").toString());
+                                            }
+                                            mSwitch.setText("Country");
+                                            mSwitch.setChecked(true);
+                                            mAdapter = new MyAdapter(myDatasetA);
+                                            mRecyclerView.setAdapter(mAdapter);
+                                            System.out.println("resultado "+result.toString());
+                                        }catch (Exception er){
+                                            System.out.println("se fue al catch");
+                                            Toast.makeText(getApplicationContext(),
+                                                    "1 mae si vio esto, mamó: " +result,
+                                                    Toast.LENGTH_LONG).show();
+                                        }
+                                    }
+                                });
+
+
+                        return true;
+
+                    case R.id.navigation_notifications:
+                        mSwitch.setVisibility(View.INVISIBLE);
+                        mRecyclerView.setVisibility(View.VISIBLE);
+                        mTextMessage.setText("Mensajes");
+                        final List myDataset3 = new ArrayList();
+                        Toast.makeText(getApplicationContext(),
+                                "vio: " +concursoUser+" vio: " + idUser,
+                                Toast.LENGTH_LONG).show();
+                        JsonObject json3 = new JsonObject();
+                        try {
+                            json3.addProperty("usuario",idUser);
+                            json3.addProperty("concurso",concursoUser);
+                        } catch (JsonIOException e) {
+                            e.printStackTrace();
+                        }
+                        Toast.makeText(getApplicationContext(),
+                                json3.toString(),
+                                Toast.LENGTH_LONG).show();
+
+                        Ion.with(getApplicationContext())
+                                .load("http://192.168.100.17:3000/db/getAcertijo")
+                                .setJsonObjectBody(json3)
+                                .asJsonArray()
+                                .setCallback(new FutureCallback<JsonArray>() {
+                                    @Override
+                                    public void onCompleted(Exception e, JsonArray result) {
+                                        // do stuff with the result or error
+                                        try {
+
+                                            Toast.makeText(getApplicationContext(),
+                                                    "salida de ion (server): " + result.toString(),
+                                                    Toast.LENGTH_LONG).show();
+                                            for(int i = 0; i < result.getAsJsonArray().size(); i=i+2){
+                                                myDataset3.add("Acertijo:"+ "\n" +
+                                                                result.getAsJsonArray().get(i).getAsJsonObject().get("COLUMN_VALUE").toString() + "\n" +
+                                                                 result.getAsJsonArray().get(i+1).getAsJsonObject().get("COLUMN_VALUE").toString());
+                                            }
+
+                                            mAdapter = new MyAdapter(myDataset3);
+                                            mRecyclerView.setAdapter(mAdapter);
+                                        }catch (Exception er){
+                                        }
+                                    }
+                                });
+                        mAdapter = new MyAdapter(myDataset3);
+                        mRecyclerView.setAdapter(mAdapter);
+                        return true;
+
+                    case R.id.navigation_dashboard:
+                        mSwitch.setVisibility(View.INVISIBLE);
+                        //mRecyclerView.setVisibility(View.INVISIBLE);
+
+                        if(true){
+                            mTextMessage.setText("Estadísticas del concurso actual: " + '\n' +
+                                    "Personas trás de X acertijo: 3" +'\n' +
+                                    "Personas que abandonaron el concurso: 4" +'\n');
+
+                        }
+                        else{
+                            mTextMessage.setText("Estadísticas: " + '\n' +
+                                    "No se ha suscrito a ningún concurso");
+                        }
+
+                        JsonObject json4 = new JsonObject();
+                        try {
+                            json4.addProperty("concurso",concursoUser);
+                        } catch (JsonIOException e) {
+                            e.printStackTrace();
+                        }
+                        Toast.makeText(getApplicationContext(),
+                                json4.toString(),
+                                Toast.LENGTH_LONG).show();
+
+                        Ion.with(getApplicationContext())
+                                .load("http://192.168.100.17:3000/db/getRanking")
+                                .setJsonObjectBody(json4)
+                                .asJsonArray()
+                                .setCallback(new FutureCallback<JsonArray>() {
+                                    @Override
+                                    public void onCompleted(Exception e, JsonArray result) {
+                                        // do stuff with the result or error
+                                        try {
+
+                                            Toast.makeText(getApplicationContext(),
+                                                    "salida de ion (server): " + result.toString(),
+                                                    Toast.LENGTH_LONG).show();
+                                            for(int i = 0; i < result.getAsJsonArray().size(); i++){
+                                            }
+
+                                        }catch (Exception er){
+                                        }
+                                    }
+                                });
+
+                        Ion.with(getApplicationContext())
+                                .load("http://192.168.100.17:3000/db/getAbandonos")
+                                .asJsonObject()
+                                .setCallback(new FutureCallback<JsonObject>() {
+                                    @Override
+                                    public void onCompleted(Exception e, JsonObject result) {
+                                        // do stuff with the result or error
+                                        try {
+
+                                            Toast.makeText(getApplicationContext(),
+                                                    "salida de ion (server): " + result.toString(),
+                                                    Toast.LENGTH_LONG).show();
+                                            }catch (Exception er){
+                                        }
+                                    }
+                                });
+                        return true;
+                }
+                return false;
+            }
+        };
+
+        navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener);
+
+
+
     }
     protected LocationRequest createLocationRequest() {
         mLocationRequest = new LocationRequest();
@@ -318,7 +629,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         Toast.makeText(getApplicationContext(),
-                "fuck "+mRequestingLocationUpdates,
+                "fuck " + mRequestingLocationUpdates,
                 Toast.LENGTH_LONG).show();
         if (mRequestingLocationUpdates) {
             startLocationUpdates();
@@ -332,19 +643,23 @@ public class MainActivity extends AppCompatActivity {
                 null);
     }
     //https://www.movable-type.co.uk/scripts/latlong.html
-    private void calculateRange(double lat1,double lat2,double lon1,double lon2){
+    private double calculateRange(double lat1,double lat2,double lon1,double lon2){
+        lat1=9.8571842;
+        lon1=-83.9180547;
         double R = 6371e3; // metres
         double phi1 = lat1 * 180/Math.PI;
         double phi2 = lat2 * 180/Math.PI;
         double deltaPhi = (lat2-lat1) * 180/Math.PI;
         double deltaLambda = (lon2-lon1) * 180/Math.PI;
-
         double a = Math.sin(deltaPhi/2) * Math.sin(deltaPhi/2) +
                 Math.cos(phi1) * Math.cos(phi2) *
-                        Math.sin(deltaPhi/2) * Math.sin(deltaLambda/2);
+                        Math.sin(deltaLambda/2) * Math.sin(deltaLambda/2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
         double d = R * c;
+
+        d = d/1000;
+
+        return d;
     }
 
 

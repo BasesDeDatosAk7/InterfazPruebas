@@ -20,22 +20,28 @@ import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Toast;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonIOException;
 import com.google.gson.JsonObject;
 import com.koushikdutta.async.future.FutureCallback;
 import com.koushikdutta.ion.Ion;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.lang.reflect.Array;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 public class Register extends AppCompatActivity {
     // UI references.
     private EditText mEmailView;
     private EditText mPasswordView;
-    private EditText mCountryView;
-    private EditText mCityView;
+    private EditText mNameView;
+    private String mCountry;
+    private String mCity;
     private RecyclerView.Adapter mAdapter;
     boolean spinnerTouched = false;
 
@@ -47,20 +53,52 @@ public class Register extends AppCompatActivity {
         // Set up the register form.
         mEmailView = (EditText) findViewById(R.id.emailRegistro);
         mPasswordView = (EditText) findViewById(R.id.passwordRegistro);
-        //mCountryView = (EditText) findViewById(R.id.countryRegistro);
-        //mCityView = (EditText) findViewById(R.id.cityRegistro);
+        mNameView = (EditText) findViewById(R.id.nameRegistro);
 
         findViewById(R.id.buttonSendRegister).setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View view) {
-
-                //Intent intent = new Intent(view.getContext(), MainActivity.class);
-                //startActivityForResult(intent, 0);
                 attemptRegister();
                 }
         });
 
-        final String[] myDataset = {"Fredo", "sos", "Groso","Cheese", "Pepperoni", "Black Olives","Fredo", "sos", "Groso"};
+        final List myDataset = new ArrayList();
+        myDataset.add("País");
+
+        Ion.with(getApplicationContext())
+                .load("http://192.168.100.17:3000/db/getPaises")
+                .asJsonArray()
+                .setCallback(new FutureCallback<JsonArray>() {
+                    @Override
+                    public void onCompleted(Exception e, JsonArray result) {
+                        // do stuff with the result or error
+                        try {
+
+                            Toast.makeText(getApplicationContext(),
+                                    "salida de ion (server): " + result.getAsJsonArray().size(),
+                                    Toast.LENGTH_LONG).show();
+                            JsonArray json = result.getAsJsonArray();
+                            for(int i = 0; i < result.getAsJsonArray().size(); i++){
+                                String pais = result.getAsJsonArray().get(i).getAsJsonObject().get("COLUMN_VALUE").toString();
+                                pais = pais.substring(1);
+                                pais = pais.substring(0, pais.length() - 1);
+                                myDataset.add(pais);
+                            }
+
+                        }catch (Exception er){
+                            Toast.makeText(getApplicationContext(),
+                                    "mae si vio esto, mamó: " +result,
+                                    Toast.LENGTH_LONG).show();
+                        }
+                    }
+                });
+
+        final List myDataset2 = new ArrayList();
+        myDataset2.add("Ciudad");
+
+
+
+
         Spinner spinner = (Spinner) findViewById(R.id.spinnerCountries);
         // Create an ArrayAdapter using the string array and a default spinner layout
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
@@ -89,8 +127,43 @@ public class Register extends AppCompatActivity {
                 if (spinnerTouched) {
                     // Do something
                     Toast.makeText(getApplicationContext(),
-                            "country: " + myDataset[position],
+                            "country: " + myDataset.get(position),
                             Toast.LENGTH_LONG).show();
+                    mCountry = myDataset.get(position).toString();
+
+                    JsonObject json = new JsonObject();
+                    try {
+                        json.addProperty("pais", mCountry);
+                    } catch (JsonIOException e) {
+                        e.printStackTrace();
+                    }
+                    System.out.println(json);
+
+                    Ion.with(getApplicationContext())
+                            .load("http://192.168.100.17:3000/db/getCiudades")
+                            .setJsonObjectBody(json)
+                            .asJsonArray()
+                            .setCallback(new FutureCallback<JsonArray>() {
+                                @Override
+                                public void onCompleted(Exception e, JsonArray result) {
+                                    // do stuff with the result or error
+                                    try {
+                                        for(int i = 0; i < result.getAsJsonArray().size(); i++) {
+                                            String ciudad = result.getAsJsonArray().get(i).getAsJsonObject().get("COLUMN_VALUE").toString();
+                                            ciudad = ciudad.substring(1);
+                                            ciudad = ciudad.substring(0, ciudad.length() - 1);
+                                            myDataset2.add(ciudad);
+                                        }
+                                    }catch (Exception er){
+                                        System.out.println(er);
+                                        Toast.makeText(getApplicationContext(),
+                                                "No hay conexión",
+                                                Toast.LENGTH_LONG).show();
+                                    }
+                                }
+
+                            });
+
                 }
                 else {
                     // Do something else
@@ -104,6 +177,7 @@ public class Register extends AppCompatActivity {
         });
 
         Spinner spinner2 = (Spinner) findViewById(R.id.spinnerCities);
+
 
         spinner2.setOnTouchListener(new View.OnTouchListener() {
             @Override
@@ -124,8 +198,9 @@ public class Register extends AppCompatActivity {
                 if (spinnerTouched) {
                     // Do something
                     Toast.makeText(getApplicationContext(),
-                            "city: " + myDataset[position],
+                            "city: " + myDataset2.get(position),
                             Toast.LENGTH_LONG).show();
+                    mCity = myDataset2.get(position).toString();
                 }
                 else {
                     // Do something else
@@ -140,10 +215,9 @@ public class Register extends AppCompatActivity {
 
 
         ArrayAdapter<String> adapter2 = new ArrayAdapter<String>(this,
-                android.R.layout.simple_spinner_item, myDataset);
+                android.R.layout.simple_spinner_item, myDataset2);
         adapter2.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinner2.setAdapter(adapter2);
-
 
 
     }
@@ -158,6 +232,7 @@ public class Register extends AppCompatActivity {
         mPasswordView.setError(null);
 
         // Store values at the time of the login attempt.
+        String name = mNameView.getText().toString();
         String email = mEmailView.getText().toString();
         String password = mPasswordView.getText().toString();
 
@@ -192,17 +267,22 @@ public class Register extends AppCompatActivity {
 
             //showProgress(true);
 
-            UserRegisterTask(email, password);
+            //UserRegisterTask(name, email, password, mCountry, mCity);
+            UserRegisterTask(name, email, password, mCountry, mCity);
+
 
         }
     }
 
-    void UserRegisterTask(String email, String password) {
+    void UserRegisterTask(String name, String email, String password,String country,String city) {
         String message;
         JsonObject json = new JsonObject();
         try {
+            json.addProperty("nombre", name);
             json.addProperty("email", email);
-            json.addProperty("password", password);
+            json.addProperty("clave", password);
+            json.addProperty("ciudad", city);
+
         } catch (JsonIOException e) {
             e.printStackTrace();
         }
@@ -213,8 +293,7 @@ public class Register extends AppCompatActivity {
                 Toast.LENGTH_LONG).show();
 
         Ion.with(getApplicationContext())
-                //.load("http://172.19.50.141:3000/api/employees")
-                .load("http://172.19.50.141:3000/api/usuario")
+                .load("http://192.168.100.17:3000/db/newUsuario")
                 .setJsonObjectBody(json)
                 .asJsonObject()
                 .setCallback(new FutureCallback<JsonObject>() {
@@ -225,6 +304,10 @@ public class Register extends AppCompatActivity {
                             Toast.makeText(getApplicationContext(),
                                     "salida de ion (server): " + result.toString(),
                                     Toast.LENGTH_LONG).show();
+                            if(result.get("retorno").toString().equals("\"true\"")) {
+                                Intent intent = new Intent(getApplicationContext(), LoginActivity.class);
+                                startActivity(intent);
+                            }
                         }catch (Exception er){
                             System.out.println(result);
                             Toast.makeText(getApplicationContext(),

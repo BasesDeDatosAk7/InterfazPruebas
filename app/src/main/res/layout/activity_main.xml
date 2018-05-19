@@ -60,6 +60,7 @@
         android:layout_height="44dp"
         android:layout_marginLeft="184dp"
         android:layout_marginStart="184dp"
+        android:checked="true"
         android:text="Country"
         app:layout_constraintStart_toEndOf="@+id/message"
         tools:ignore="MissingConstraints"

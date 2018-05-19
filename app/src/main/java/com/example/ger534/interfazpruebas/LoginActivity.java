@@ -29,6 +29,12 @@ import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import com.google.gson.JsonIOException;
+import com.google.gson.JsonObject;
+import com.koushikdutta.async.future.FutureCallback;
+import com.koushikdutta.ion.Ion;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -88,9 +94,47 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
         Button mEmailSignInButton = (Button) findViewById(R.id.email_sign_in_button);
         mEmailSignInButton.setOnClickListener(new OnClickListener() {
             @Override
-            public void onClick(View view) {
-                Intent intent = new Intent(view.getContext(), MainActivity.class);
-                startActivityForResult(intent, 0);
+            public void onClick(final View view) {
+
+
+                JsonObject json = new JsonObject();
+                try {
+                    json.addProperty("usuario", mEmailView.getText().toString());
+                    json.addProperty("clave", mPasswordView.getText().toString());
+                } catch (JsonIOException e) {
+                    e.printStackTrace();
+                }
+
+                Ion.with(getApplicationContext())
+                        .load("http://192.168.100.17:3000/db/checkUsuario")
+                        .setJsonObjectBody(json)
+                        .asJsonObject()
+                        .setCallback(new FutureCallback<JsonObject>() {
+                            @Override
+                            public void onCompleted(Exception e, JsonObject result) {
+                                // do stuff with the result or error
+                                try {
+                                    if(result.get("retorno").toString().equals("\"-1\"") || result.get("retorno").toString().equals("\"false\"")){
+                                        Toast.makeText(getApplicationContext(),
+                                                "El usuario no existe",
+                                                Toast.LENGTH_LONG).show();
+                                    }else{
+                                        Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+
+                                        intent.putExtra("idUser", result.get("retorno").toString());
+                                        intent.putExtra("nameUser", mEmailView.getText().toString());
+                                        startActivity(intent);
+                                    }
+
+                                }catch (Exception er){
+                                    Toast.makeText(getApplicationContext(),
+                                            "No hay conexión",
+                                            Toast.LENGTH_LONG).show();
+                                }
+                            }
+
+                        });
+
                 //attemptLogin();
             }
         });
